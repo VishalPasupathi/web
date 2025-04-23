@@ -1,0 +1,1150 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vishal Pasupathi</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;500;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      height: 100vh;
+      background: linear-gradient(135deg, #3b0a0a, #6b0f0f);
+      font-family: 'Roboto', sans-serif;
+      color: white;
+      overflow: hidden;
+      position: relative;
+      transition: background 1s ease;
+    }
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      opacity: 0.5;
+    }
+    nav {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      z-index: 2;
+    }
+    nav a {
+      color: white;
+      text-decoration: none;
+      margin: 0 15px;
+      font-size: 1.1rem;
+      font-weight: 300;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+    nav a:hover {
+      color: #cccccc;
+    }
+    .section {
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+    .section.active {
+      display: flex;
+    }
+    .home-section {
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      flex-direction: column;
+      max-width: 600px;
+      padding: 0 20px;
+    }
+    .home-section .main-title {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 15px;
+      color: white;
+    }
+    .home-section .main-title::after {
+      content: "|";
+      animation: blink 1s infinite;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+    .home-section .dynamic-role {
+      font-size: 2rem;
+      font-weight: 300;
+      min-height: 50px;
+      animation: fadeInOut 4s infinite;
+      color: white;
+      line-height: 1.2;
+    }
+    .home-section .description {
+      font-size: 1.1rem;
+      font-weight: 300;
+      line-height: 1.6;
+      margin-top: 20px;
+      color: rgba(255, 255, 255, 0.9);
+    }
+    @keyframes fadeInOut {
+      0%, 100% { opacity: 0; }
+      10%, 25% { opacity: 1; }
+      35%, 50% { opacity: 0; }
+      60%, 75% { opacity: 1; }
+      85%, 100% { opacity: 0; }
+    }
+    .about-section {
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 0 20px;
+      width: 100%;
+    }
+    .about-section h2 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 30px;
+      color: white;
+      text-transform: uppercase;
+      text-align: center;
+    }
+    .about-section .content-container {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      max-width: 1200px;
+      margin-bottom: 40px;
+      gap: 20px;
+    }
+    .about-section .quote-container {
+      flex: 1;
+      padding-right: 10px;
+    }
+    .about-section .quote {
+      font-size: 1.2rem;
+      font-weight: 300;
+      line-height: 1.6;
+      color: rgba(255, 255, 255, 0.9);
+    }
+    .about-section .description-container {
+      flex: 1;
+      padding-left: 10px;
+    }
+    .about-section .description {
+      font-size: 1.1rem;
+      font-weight: 300;
+      line-height: 1.6;
+      color: rgba(255, 255, 255, 0.9);
+    }
+    .about-section .stats {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      padding: 0 20px;
+      margin-bottom: 40px;
+    }
+    .about-section .stat-item {
+      text-align: center;
+      flex: 1;
+      padding: 0 10px;
+    }
+    .about-section .stat-item .number {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: white;
+    }
+    .about-section .stat-item .label {
+      font-size: 0.9rem;
+      font-weight: 300;
+      color: rgba(255, 255, 255, 0.9);
+    }
+    .timeline {
+      position: relative;
+      width: 100%;
+      padding: 0 20px;
+      height: 100px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 20px;
+      right: 20px;
+      height: 2px;
+      background: rgba(255, 255, 255, 0.5);
+    }
+    .timeline .timeline-item {
+      text-align: center;
+      position: relative;
+      flex: 1;
+    }
+    .timeline .timeline-item a {
+      display: inline-block;
+    }
+    .timeline .timeline-item img {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      margin-bottom: 5px;
+    }
+    .timeline .timeline-item .year {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: white;
+    }
+    .timeline .timeline-item .location {
+      font-size: 0.8rem;
+      font-weight: 300;
+      color: rgba(255, 255, 255, 0.9);
+    }
+    .timeline .timeline-item::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 10px;
+      height: 10px;
+      background: white;
+      border-radius: 50%;
+    }
+    .skills-section {
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 60px 20px 0 20px;
+      width: 100%;
+      overflow-y: auto;
+    }
+    .skills-section h2 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 15px;
+      color: white;
+      text-transform: uppercase;
+      text-align: center;
+    }
+    .skills-section .description {
+      font-size: 1.1rem;
+      font-weight: 300;
+      line-height: 1.6;
+      margin-bottom: 20px;
+      color: rgba(255, 255, 255, 0.9);
+      text-align: center;
+      max-width: 600px;
+    }
+    .skills-section .toggle-button {
+      background: none;
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      color: white;
+      padding: 10px 20px;
+      font-size: 1rem;
+      font-weight: 300;
+      text-transform: uppercase;
+      cursor: pointer;
+      margin-bottom: 20px;
+    }
+    .skills-section .toggle-button:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    .skills-section .table-container {
+      position: relative;
+      width: 100%;
+      max-width: 600px;
+      display: none;
+    }
+    .skills-section .table-container.visible {
+      display: block;
+      margin-top: 150px; /* Added to push the table down */
+    }
+    .skills-section .close-button {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: none;
+      border: none;
+      color: white;
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+    .skills-section table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+    .skills-section th, .skills-section td {
+      padding: 8px;
+      text-align: left;
+      vertical-align: top;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .skills-section th {
+      font-size: 1.1rem;
+      font-weight: 500;
+      color: white;
+    }
+    .skills-section td {
+      font-size: 0.8rem;
+      font-weight: 300;
+      color: rgba(255, 255, 255, 0.9);
+    }
+    .skills-section .skills-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .skills-section .skill-item {
+      text-align: center;
+    }
+    .skills-section .skill-item a {
+      display: inline-block;
+    }
+    .skills-section .skill-item img {
+      width: 30px;
+      height: 30px;
+      object-fit: contain;
+    }
+    .experience-section {
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 0 20px;
+      width: 100%;
+    }
+    .experience-section h2 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: white;
+      text-transform: uppercase;
+      text-align: center;
+    }
+    .experience-section .description {
+      font-size: 1.1rem;
+      font-weight: 300;
+      line-height: 1.6;
+      margin-bottom: 40px;
+      color: rgba(255, 255, 255, 0.9);
+      text-align: center;
+      max-width: 800px;
+    }
+    .experience-section .industry-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      justify-items: center;
+      width: 100%;
+      max-width: 600px;
+    }
+    .experience-section .industry-item {
+      text-align: center;
+    }
+    .experience-section .industry-item a {
+      display: inline-block;
+    }
+    .experience-section .industry-item img {
+      width: 50px;
+      height: 50px;
+      object-fit: contain;
+    }
+    .contact-section {
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 0 20px;
+      width: 100%;
+    }
+    .contact-section h2 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: white;
+      text-transform: uppercase;
+      text-align: center;
+    }
+    .contact-section .funny-text {
+      font-size: 1.2rem;
+      font-weight: 300;
+      margin-bottom: 20px;
+      color: rgba(255, 255, 255, 0.9);
+      text-align: center;
+    }
+    .contact-section .description {
+      font-size: 1.1rem;
+      font-weight: 300;
+      line-height: 1.6;
+      margin-bottom: 40px;
+      color: rgba(255, 255, 255, 0.9);
+      text-align: center;
+      max-width: 600px;
+    }
+    .contact-section .social-links {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+    }
+    .contact-section .social-links a {
+      display: inline-block;
+    }
+    .contact-section .social-links img {
+      width: 40px;
+      height: 40px;
+      object-fit: contain;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="particleCanvas"></canvas>
+  <nav>
+    <a onclick="showSection('home')">Home</a>
+    <a onclick="showSection('about')">About</a>
+    <a onclick="showSection('skills')">Skills</a>
+    <a onclick="showSection('experience')">Experience</a>
+    <a onclick="showSection('contact')">Contact</a>
+  </nav>
+  <div id="home" class="section home-section active">
+    <div class="main-title" id="typewriter"></div>
+    <div class="dynamic-role" id="roleText">Automation Developer and Architect</div>
+    <div class="description" style="text-align: justify;">
+  Strategic Data and Automation Specialist with 8+ years of consulting and banking experience, delivering enterprise-grade AI, data, and automation solutions at scale. Focused on building intelligent, efficient systems that drive business value—bringing deep expertise in Identity Oversight and ESG to ensure alignment with compliance, security, and sustainability goals. Known for transforming complex challenges into streamlined, future-ready architectures.
+</div>
+
+  </div>
+  <div id="about" class="section about-section">
+    <h2>My Main Gig.</h2>
+    <div class="content-container">
+      <div class="quote-container">
+        <div class="quote">
+          Since you've crunched the homepage data, it's time I reveal some insights about myself, right? 📊
+        </div>
+      </div>
+      <div class="description-container">
+        <div class="description">
+          I am a certified RPA Architect and Developer, Conversational AI Developer, Data Analyst, and ESG Consultant with a Master's in Data Science. My expertise spans Digital Transformation, End-to-End Implementation, and Identity Oversight.<br><br>
+          I primarily work in the Banking and Finance sector, with extensive experience in Healthcare, Energy, Construction, Telecom, Real Estate, Superannuation, and Retail industries.
+        </div>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat-item">
+        <div class="number" id="stat1">0</div>
+        <div class="label">Years of Industry Experience</div>
+      </div>
+      <div class="stat-item">
+        <div class="number" id="stat2">0</div>
+        <div class="label">Certificates</div>
+      </div>
+      <div class="stat-item">
+        <div class="number" id="stat3">0</div>
+        <div class="label">Transformation Programs Delivered</div>
+      </div>
+      <div class="stat-item">
+        <div class="number" id="stat4">0</div>
+        <div class="label">Clients Across the Globe</div>
+      </div>
+    </div>
+    <div class="timeline">
+      <div class="timeline-item">
+        <a href="https://www.accenture.com" target="_blank">
+          <img src="https://logo.clearbit.com/accenture.com" alt="Accenture Logo">
+        </a>
+        <div class="year">2016</div>
+        <div class="location">India</div>
+      </div>
+      <div class="timeline-item">
+        <a href="https://www.wipro.com" target="_blank">
+          <img src="https://logo.clearbit.com/wipro.com" alt="Wipro Logo">
+        </a>
+        <div class="year">2018</div>
+        <div class="location">UAE</div>
+      </div>
+      <div class="timeline-item">
+        <a href="https://www.ey.com" target="_blank">
+          <img src="https://logo.clearbit.com/ey.com" alt="EY Logo">
+        </a>
+        <div class="year">2019</div>
+        <div class="location">Kuwait</div>
+      </div>
+      <div class="timeline-item">
+        <a href="https://www.nbk.com" target="_blank">
+          <img src="https://logo.clearbit.com/nbk.com" alt="National Bank of Kuwait Logo">
+        </a>
+        <div class="year">2021</div>
+        <div class="location">Bahrain</div>
+      </div>
+      <div class="timeline-item">
+        <a href="https://www.intellificial.com" target="_blank">
+          <img src="https://logo.clearbit.com/intellificial.com" alt="Intellificial Logo">
+        </a>
+        <div class="year">2022</div>
+        <div class="location">Australia</div>
+      </div>
+      <div class="timeline-item">
+        <a href="https://www.sab.com" target="_blank">
+          <img src="https://logo.clearbit.com/sab.com" alt="Saudi Awwal Bank Logo">
+        </a>
+        <div class="year">2023</div>
+        <div class="location">Saudi Arabia</div>
+      </div>
+    </div>
+  </div>
+  <div id="skills" class="section skills-section">
+    <h2>My Skills.</h2>
+    <div class="description" id="skillsDescription">
+      Throughout my career, I’ve developed deep expertise in AI, Data, and Automation, leveraging cutting-edge tools to drive insights and streamline processes. Below, I’ve showcased some of my favorite skills that might pique your interest.
+    </div>
+    <button class="toggle-button" id="viewSkillsButton" onclick="toggleSkillsTable()">View Skills</button>
+    <div class="table-container" id="tableContainer">
+      <button class="close-button" onclick="closeSkillsTable()">✕</button>
+      <table id="skillsTable">
+        <tr>
+          <th>Category</th>
+          <th>Skills</th>
+        </tr>
+        <tr>
+          <td>Advanced Analytics and Data Visualization</td>
+          <td>
+            <div class="skills-grid">
+              <div class="skill-item">
+                <a href="https://www.tableau.com" target="_blank">
+                  <img src="https://logo.clearbit.com/tableau.com" alt="Tableau Logo">
+                </a>
+              </div>
+              <div class="skill-item">
+                <a href="https://powerbi.microsoft.com" target="_blank">
+                  <img src="https://certadda.com/wp-content/uploads/1605/02/power-bi.jpg" alt="Power BI Logo">
+                </a>
+              </div>
+              <div class="skill-item">
+                <a href="https://www.microsoft.com/en-us/sql-server/sql-server-reporting-services" target="_blank">
+                  <img src="https://th.bing.com/th/id/OIP.OhOEKbs5KKGc2QCgrS1EXgAAAA?w=176&h=176&c=8&rs=1&qlt=90&o=6&dpr=1.5&pid=3.1&rm=2" alt="SSRS Logo">
+                </a>
+              </div>
+              <div class="skill-item">
+                <a href="https://www.alteryx.com" target="_blank">
+                  <img src="https://logo.clearbit.com/alteryx.com" alt="Alteryx Logo">
+                </a>
+              </div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td>RPA</td>
+          <td>
+            <div class="skills-grid">
+              <div class="skill-item">
+                <a href="https://www.automationanywhere.com" target="_blank">
+                  <img src="https://logo.clearbit.com/automationanywhere.com" alt="Automation Anywhere Logo">
+                </a>
+              </div>
+              <div class="skill-item">
+                <a href="https://www.blueprism.com" target="_blank">
+                  <img src="https://logo.clearbit.com/blueprism.com" alt="Blue Prism Logo">
+                </a>
+              </div>
+              <div class="skill-item">
+                <a href="https://www.uipath.com" target="_blank">
+                  <img src="https://logo.clearbit.com/uipath.com" alt="UiPath Logo">
+                </a>
+              </div>
+              <div class="skill-item">
+                <a href="https://powerautomate.microsoft.com" target="_blank">
+                  <img src="https://th.bing.com/th/id/OIP.kKmvLKTMEZWWGqlowOLuGwHaEK?rs=1&pid=ImgDetMain" alt="Power Automate Logo">
+                </a>
+              </div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td>BPM</td>
+          <td>
+            <div class="skills-grid">
+              <div class="skill-item">
+                <a href="https://www.pega.com" target="_blank">
+                  <img src="https://logo.clearbit.com/pega.com" alt="PEGA Logo">
+                </a>
+              </div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td>Process Mining</td>
+          <td>
+            <div class="skills-grid">
+              <div class="skill-item">
+                <a href="https://www.abbyy.com" target="_blank">
+                  <img src="https://logo.clearbit.com/abbyy.com" alt="Abbyy Timeline Logo">
+                </a>
+              </div>
+              <div class="skill-item">
+                <a href="https://www.celonis.com" target="_blank">
+                  <img src="https://logo.clearbit.com/celonis.com" alt="Celonis Logo">
+                </a>
+              </div>
+              <div class="skill-item">
+                <a href="https://www.qpr.com" target="_blank">
+                  <img src="https://logo.clearbit.com/qpr.com" alt="QPR Botteq Logo">
+                </a>
+              </div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td>CAI and Gen AI</td>
+          <td>
+            <div class="skills-grid">
+              <div class="skill-item">
+                <a href="https://kore.ai" target="_blank">
+                  <img src="https://logo.clearbit.com/kore.ai" alt="Kore AI Logo">
+                </a>
+              </div>
+              <div class="skill-item">
+                <a href="https://rasa.com" target="_blank">
+                  <img src="https://logo.clearbit.com/rasa.com" alt="RASA Logo">
+                </a>
+              </div>
+              <div class="skill-item">
+                <a href="https://www.moveworks.com" target="_blank">
+                  <img src="https://logo.clearbit.com/moveworks.com" alt="Moveworks Logo">
+                </a>
+              </div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td>API</td>
+          <td>
+            <div class="skills-grid">
+              <div class="skill-item">
+                <a href="https://www.python.org" target="_blank">
+                  <img src="https://th.bing.com/th?q=Soap+API+Consumer+Logo&w=120&h=120&c=1&rs=1&qlt=90&cb=1&dpr=1.5&pid=InlineBlock&mkt=en-AU&cc=AU&setlang=en&adlt=moderate&t=1&mw=247" alt="REST API">
+                </a>
+              </div>
+              <div class="skill-item">
+                <a href="https://www.python.org" target="_blank">
+                  <img src="https://th.bing.com/th?q=Soap+API+Icon.png&w=120&h=120&c=1&rs=1&qlt=90&cb=1&dpr=1.5&pid=InlineBlock&mkt=en-AU&cc=AU&setlang=en&adlt=moderate&t=1&mw=247" alt="SOAP API">
+                </a>
+              </div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td>Languages</td>
+          <td>
+            <div class="skills-grid">
+              <div class="skill-item">
+                <a href="https://www.python.org" target="_blank">
+                  <img src="https://logo.clearbit.com/python.org" alt="Python Logo">
+                </a>
+              </div>
+              <div class="skill-item">
+                <a href="https://www.r-project.org" target="_blank">
+                  <img src="https://logo.clearbit.com/r-project.org" alt="R Logo">
+                </a>
+              </div>
+              <div class="skill-item">
+                <a href="https://learn.microsoft.com/en-us/dotnet/csharp/" target="_blank">
+                  <img src="https://serengetijade.github.io/img/technologies/csharp.jpg" alt="C# Logo">
+                </a>
+              </div>
+              <div class="skill-item">
+                <a href="https://www.selenium.dev" target="_blank">
+                  <img src="https://logo.clearbit.com/selenium.dev" alt="Selenium Logo">
+                </a>
+              </div>
+              <div class="skill-item">
+                <a href="https://www.javascript.com" target="_blank">
+                  <img src="https://logo.clearbit.com/javascript.com" alt="JavaScript Logo">
+                </a>
+              </div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td>Database</td>
+          <td>
+            <div class="skills-grid">
+              <div class="skill-item">
+                <a href="https://www.microsoft.com/en-us/sql-server" target="_blank">
+                  <img src="https://th.bing.com/th/id/OIP.vmJyit9iM6-RQDbT0OoDaQHaFj?w=225&h=180&c=7&r=0&o=5&dpr=1.5&pid=1.7" alt="MS SQL Logo">
+                </a>
+              </div>
+              <div class="skill-item">
+                <a href="https://www.mysql.com" target="_blank">
+                  <img src="https://logo.clearbit.com/mysql.com" alt="MySQL Logo">
+                </a>
+              </div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td>Containerization and Orchestration</td>
+          <td>
+            <div class="skills-grid">
+              <div class="skill-item">
+                <a href="https://www.docker.com" target="_blank">
+                  <img src="https://logo.clearbit.com/docker.com" alt="Docker Logo">
+                </a>
+              </div>
+              <div class="skill-item">
+                <a href="https://kubernetes.io" target="_blank">
+                  <img src="https://logo.clearbit.com/kubernetes.io" alt="Kubernetes Logo">
+                </a>
+              </div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td>Version Control Systems</td>
+          <td>
+            <div class="skills-grid">
+              <div class="skill-item">
+                <a href="https://git-scm.com" target="_blank">
+                  <img src="https://logo.clearbit.com/git-scm.com" alt="Git Logo">
+                </a>
+              </div>
+              <div class="skill-item">
+                <a href="https://github.com" target="_blank">
+                  <img src="https://cloud-elements.com/wp-content/uploads/2019/01/github-logo-6004.jpg" alt="GitHub Logo">
+                </a>
+              </div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+
+          <tr>
+          <td>ETL</td>
+          <td>
+            <div class="skills-grid">
+              <div class="skill-item">
+                <a href="https://www.databricks.com" target="_blank">
+                  <img src="https://logo.clearbit.com/databricks.com" alt="Databricks Logo">
+                </a>
+              </div>
+            </div>
+          </td>
+        </tr>
+        </tr>
+          <td>Cloud Platforms</td>
+          <td>
+            <div class="skills-grid">
+              <div class="skill-item">
+                <a href="https://aws.amazon.com" target="_blank">
+                  <img src="https://logo.clearbit.com/amazon.com" alt="AWS Logo">
+                </a>
+              </div>
+              <div class="skill-item">
+                <a href="https://azure.microsoft.com" target="_blank">
+                  <img src="https://ih1.redbubble.net/image.2292542948.2979/flat,750x,075,f-pad,750x1000,f8f8f8.jpg" alt="Azure Logo">
+                </a>
+              </div>
+              <div class="skill-item">
+                <a href="https://console.cloud.google.com/welcome/new?pli=1" target="_blank">
+                  <img src="https://www.techarge.in/wp-content/uploads/2021/11/100.webp" alt="GCP Logo">
+                </a>
+              </div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td>Project Management Tools</td>
+          <td>
+            <div class="skills-grid">
+              <div class="skill-item">
+                <a href="https://www.atlassian.com/software/jira" target="_blank">
+                  <img src="https://th.bing.com/th/id/OIP.mdF-moqXPaF78Kr-ok-duQHaHa?rs=1&pid=ImgDetMain" alt="Jira Logo">
+                </a>
+              </div>
+              <div class="skill-item">
+                <a href="https://www.atlassian.com/software/confluence" target="_blank">
+                  <img src="https://www.queknow.com/wp-content/uploads/2022/02/Confluence-software.png" alt="Confluence Logo">
+                </a>
+              </div>
+              <div class="skill-item">
+                <a href="https://trello.com" target="_blank">
+                  <img src="https://logo.clearbit.com/trello.com" alt="Trello Logo">
+                </a>
+              </div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td>IT Risk Management and Compliance</td>
+          <td>
+            <div class="skills-grid">
+              <div class="skill-item">
+                <a href="https://www.rsa.com" target="_blank">
+                  <img src="https://logo.clearbit.com/rsa.com" alt="RSA Archer Logo">
+                </a>
+              </div>
+              <div class="skill-item">
+                <a href="https://www.cyberark.com" target="_blank">
+                  <img src="https://logo.clearbit.com/cyberark.com" alt="CyberArk Logo">
+                </a>
+              </div>
+              <div class="skill-item">
+                <a href="https://www.sailpoint.com/" target="_blank">
+                  <img src="https://logodix.com/logo/1764649.png" alt="SailPoint Logo">
+                </a>
+              </div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td>Advanced User</td>
+          <td>
+            <div class="skills-grid">
+              <div class="skill-item">
+                <a href="https://www.microsoft.com/en-us/microsoft-365/excel" target="_blank">
+                  <img src="https://th.bing.com/th/id/OIP.CDGjcrk57pWOwaSk4CrRGQAAAA?rs=1&pid=ImgDetMain" alt="Microsoft Excel Logo">
+                </a>
+              </div>
+              <div class="skill-item">
+                <a href="https://www.microsoft.com/en-us/microsoft-365/powerpoint" target="_blank">
+                  <img src="https://www.kindpng.com/picc/m/703-7032746_power-point-png-icon-transparent-background-microsoft-powerpoint.png" alt="Microsoft PowerPoint Logo">
+                </a>
+              </div>
+              <div class="skill-item">
+                <a href="https://www.microsoft.com/en-us/microsoft-365/word" target="_blank">
+                  <img src="https://logodix.com/logo/379505.png" alt="Microsoft Word Logo">
+                </a>
+              </div>
+              <div class="skill-item">
+                <a href="https://www.microsoft.com/en-us/microsoft-365/visio" target="_blank">
+                  <img src="https://th.bing.com/th/id/OIP.0Pguli3CJl1Z5VSu-tJnxgHaEj?rs=1&pid=ImgDetMain" alt="Microsoft Visio Logo">
+                </a>
+              </div>
+            </div>
+          </td>
+        </tr>
+      </table>
+    </div>
+  </div>
+  <div id="experience" class="section experience-section">
+    <h2>My Experience.</h2>
+    <div class="description">
+      I have successfully navigated projects spanning diverse scales and domains, including education, media, government, banking, insurance, retail, manufacturing, pharmaceuticals, and more. Feel free to explore my portfolio by clicking the selected logos below to delve into the details of the work I’ve undertaken, if you find it of interest.
+    </div>
+    <div class="industry-grid">
+      <div class="industry-item">
+        <a href="/portfolio/banking" target="_blank">
+          <img src="https://img.icons8.com/?size=100&id=121998&format=png&color=ffffff" alt="Banking Icon">
+        </a>
+      </div>
+      <div class="industry-item">
+        <a href="/portfolio/construction" target="_blank">
+          <img src="https://img.icons8.com/?size=100&id=121999&format=png&color=ffffff" alt="Construction Icon">
+        </a>
+      </div>
+      <div class="industry-item">
+        <a href="/portfolio/energy" target="_blank">
+          <img src="https://img.icons8.com/?size=100&id=122000&format=png&color=ffffff" alt="Energy Sector Icon">
+        </a>
+      </div>
+      <div class="industry-item">
+        <a href="/portfolio/healthcare" target="_blank">
+          <img src="https://img.icons8.com/?size=100&id=122001&format=png&color=ffffff" alt="Healthcare Icon">
+        </a>
+      </div>
+      <div class="industry-item">
+        <a href="/portfolio/real-estate" target="_blank">
+          <img src="https://img.icons8.com/?size=100&id=122002&format=png&color=ffffff" alt="Real Estate Icon">
+        </a>
+      </div>
+      <div class="industry-item">
+        <a href="/portfolio/retail" target="_blank">
+          <img src="https://img.icons8.com/?size=100&id=122003&format=png&color=ffffff" alt="Retail Icon">
+        </a>
+      </div>
+      <div class="industry-item">
+        <a href="/portfolio/superannuation" target="_blank">
+          <img src="https://img.icons8.com/?size=100&id=122004&format=png&color=ffffff" alt="Superannuation Icon">
+        </a>
+      </div>
+      <div class="industry-item">
+        <a href="/portfolio/telecom" target="_blank">
+          <img src="https://img.icons8.com/?size=100&id=122005&format=png&color=ffffff" alt="Telecom Icon">
+        </a>
+      </div>
+      <div class="industry-item">
+        <a href="/portfolio/education" target="_blank">
+          <img src="https://img.icons8.com/?size=100&id=122006&format=png&color=ffffff" alt="Education Icon">
+        </a>
+      </div>
+    </div>
+  </div>
+  <div id="contact" class="section contact-section">
+    <h2>Contact Me.</h2>
+    <div class="funny-text">
+      You actually scrolled till the very end! 🤯
+    </div>
+    <div class="description">
+      Should you find yourself intrigued and eager to delve deeper into conversation, feel free to connect with me through any of the platforms listed below. I'm always open to engaging in meaningful discussions and would love to hear from you.
+    </div>
+    <div class="social-links">
+      <a href="https://www.linkedin.com/in/vishalpasupathi/" target="_blank">
+        <img src="https://img.icons8.com/?size=100&id=13930&format=png&color=ffffff" alt="LinkedIn Icon">
+      </a>
+      <a href="https://www.facebook.com/vishal.raghav1/" target="_blank">
+        <img src="https://img.icons8.com/?size=100&id=118497&format=png&color=ffffff" alt="Facebook Icon">
+      </a>
+      <a href="https://www.instagram.com/vishalraghav10/" target="_blank">
+        <img src="https://clipart.info/images/ccovers/1516920567instagram-png-logo-transparent.png" alt="Instagram Icon">
+      </a>
+      <a href="mailto:vishalpasupathi1005@gmail.com">
+        <img src="https://www.freepnglogos.com/uploads/gmail-email-logo-png-16.png" alt="Mail Icon">
+      </a>
+      <a href="tel:+61455265059">
+        <img src="https://purepng.com/public/uploads/large/purepng.com-phone-iconsymbolsiconsapple-iosiosios-8-iconsios-8-721522596098aomr5.png" alt="Mobile Icon">
+      </a>
+    </div>
+  </div>
+
+  <script>
+    // Section navigation
+    function showSection(sectionId) {
+      document.querySelectorAll('.section').forEach(section => {
+        section.classList.remove('active');
+      });
+      document.getElementById(sectionId).classList.add('active');
+
+      // Trigger counter animation when About section is shown
+      if (sectionId === 'about') {
+        animateCounters();
+      }
+      // Reset Skills page state when navigating to Skills section
+      if (sectionId === 'skills') {
+        resetSkillsPage();
+      }
+    }
+
+    // Toggle skills table visibility and zoom to 75%
+    function toggleSkillsTable() {
+      const description = document.getElementById('skillsDescription');
+      const button = document.getElementById('viewSkillsButton');
+      const tableContainer = document.getElementById('tableContainer');
+
+      description.style.display = 'none';
+      button.style.display = 'none';
+      tableContainer.classList.add('visible');
+      document.body.style.zoom = "100%";
+    }
+
+    // Close skills table, show description, and reset zoom to 100%
+    function closeSkillsTable() {
+      const description = document.getElementById('skillsDescription');
+      const button = document.getElementById('viewSkillsButton');
+      const tableContainer = document.getElementById('tableContainer');
+
+      description.style.display = 'block';
+      button.style.display = 'block';
+      tableContainer.classList.remove('visible');
+      document.body.style.zoom = "100%";
+    }
+
+    // Reset Skills page state
+    function resetSkillsPage() {
+      const description = document.getElementById('skillsDescription');
+      const button = document.getElementById('viewSkillsButton');
+      const tableContainer = document.getElementById('tableContainer');
+
+      description.style.display = 'block';
+      button.style.display = 'block';
+      tableContainer.classList.remove('visible');
+      document.body.style.zoom = "100%";
+    }
+
+    // Counter animation for stats
+    function animateCounters() {
+      const stats = [
+        { id: 'stat1', target: 8 },
+        { id: 'stat2', target: 10 },
+        { id: 'stat3', target: 20 },
+        { id: 'stat4', target: 20 }
+      ];
+
+      stats.forEach(stat => {
+        const element = document.getElementById(stat.id);
+        let count = 0;
+        const increment = stat.target / 50;
+        const interval = setInterval(() => {
+          count += increment;
+          if (count >= stat.target) {
+            count = stat.target;
+            clearInterval(interval);
+          }
+          element.textContent = Math.round(count) + '+';
+        }, 20);
+      });
+    }
+
+    // Typewriter effect for the main title (Home section)
+    const typewriterText = "Hi, I'm Vishal Pasupathi";
+    const typewriterElement = document.getElementById('typewriter');
+    let charIndex = 0;
+
+    function type() {
+      if (charIndex < typewriterText.length) {
+        typewriterElement.textContent = typewriterText.substring(0, charIndex + 1);
+        charIndex++;
+        setTimeout(type, 100);
+      }
+    }
+    type();
+
+    // Role text animation with background color change
+    const roles = [
+      'Automation Developer and Architect',
+      'Data Analyst',
+      'Data Scientist',
+      'AI Consultant'
+    ];
+
+    const backgrounds = [
+      'linear-gradient(135deg, #3b0a0a, #6b0f0f)',
+      'linear-gradient(135deg, #1a0b2e, #3b1a5a)',
+      'linear-gradient(135deg, #0a1e3b, #1a3b6b)',
+      'linear-gradient(135deg, #1a1a1a, #3b3b3b)'
+    ];
+
+    let roleIndex = 0;
+    const roleText = document.getElementById('roleText');
+
+    setInterval(() => {
+      roleIndex = (roleIndex + 1) % roles.length;
+      roleText.textContent = roles[roleIndex];
+      document.body.style.background = backgrounds[roleIndex];
+    }, 4000);
+
+    // Particle background animation
+    const canvas = document.getElementById('particleCanvas');
+    const ctx = canvas.getContext('2d');
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    window.addEventListener('resize', () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    });
+
+    class Particle {
+      constructor() {
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * canvas.height;
+        this.size = Math.random() * 2 + 1;
+        this.speedX = Math.random() * 0.3 - 0.15;
+        this.speedY = Math.random() * 0.3 - 0.15;
+      }
+
+      update() {
+        this.x += this.speedX;
+        this.y += this.speedY;
+        if (this.x < 0) this.x = canvas.width;
+        if (this.x > canvas.width) this.x = 0;
+        if (this.y < 0) this.y = canvas.height;
+        if (this.y > canvas.height) this.y = 0;
+      }
+
+      draw() {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    const particlesArray = [];
+    const numberOfParticles = 50;
+
+    for (let i = 0; i < numberOfParticles; i++) {
+      particlesArray.push(new Particle());
+    }
+
+    function connectParticles() {
+      const maxDistance = 150;
+      for (let a = 0; a < particlesArray.length; a++) {
+        for (let b = a; b < particlesArray.length; b++) {
+          const dx = particlesArray[a].x - particlesArray[b].x;
+          const dy = particlesArray[a].y - particlesArray[b].y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+
+          if (distance < maxDistance) {
+            ctx.strokeStyle = `rgba(255, 255, 255, ${1 - distance / maxDistance})`;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(particlesArray[a].x, particlesArray[a].y);
+            ctx.lineTo(particlesArray[b].x, particlesArray[b].y);
+            ctx.stroke();
+          }
+        }
+      }
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particlesArray.forEach(particle => {
+        particle.update();
+        particle.draw();
+      });
+      connectParticles();
+      requestAnimationFrame(animate);
+    }
+
+    animate();
+  </script>
+</body>
+</html>
